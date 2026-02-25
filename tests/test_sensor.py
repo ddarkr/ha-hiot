@@ -95,3 +95,4 @@ async def test_energy_sensor_unit_conversion_and_attributes(
     assert elec_usage.device_info.get("identifiers") == {
         (DOMAIN, f"{mock_config_entry.entry_id}_energy")
     }
+    assert elec_usage.device_info.get("manufacturer") == "Hyundai HT"
