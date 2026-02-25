@@ -1,8 +1,0 @@
-{
-  "name": "HT HomeService",
-  "content_in_root": false,
-  "country": "KR",
-  "homeassistant": "2024.8.0",
-  "render_readme": true,
-  "domains": ["hiot"]
-}
