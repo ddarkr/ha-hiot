@@ -24,6 +24,9 @@ from .crypto import encrypt
 
 _LOGGER = logging.getLogger(__name__)
 
+MAX_AUTH_RETRY_ATTEMPTS = 10
+MAX_AUTH_RETRY_DELAY_SECONDS = 10
+
 
 class HiotApiError(Exception):
     """Base exception for HT HomeService API."""
@@ -289,24 +292,39 @@ class HiotApiClient:
     ) -> Any:
         """Make an API request with error handling."""
         url = f"{self._base_url}/{path}"
+        auth_retry_attempt = 0
 
         try:
-            async with self._session.request(method, url, **kwargs) as resp:
-                if resp.status == 401 and require_auth:
-                    self._authenticated = False
-                    await self.async_ensure_authenticated()
-                    # Retry after re-auth
-                    async with self._session.request(method, url, **kwargs) as retry_resp:
-                        if retry_resp.status == 401:
-                            raise HiotAuthError("Authentication failed")
-                        retry_resp.raise_for_status()
-                        return await self._parse_response(retry_resp)
+            while True:
+                async with self._session.request(method, url, **kwargs) as resp:
+                    if resp.status != 401:
+                        resp.raise_for_status()
+                        return await self._parse_response(resp)
 
-                if resp.status == 401:
-                    raise HiotAuthError("Authentication failed")
+                    if not require_auth:
+                        raise HiotAuthError("Authentication failed")
 
-                resp.raise_for_status()
-                return await self._parse_response(resp)
+                self._authenticated = False
+                auth_retry_attempt += 1
+                if auth_retry_attempt > MAX_AUTH_RETRY_ATTEMPTS:
+                    raise HiotAuthError(
+                        f"Authentication failed after {MAX_AUTH_RETRY_ATTEMPTS} retries"
+                    )
+
+                await self.async_ensure_authenticated()
+
+                retry_delay = min(
+                    2 ** (auth_retry_attempt - 1),
+                    MAX_AUTH_RETRY_DELAY_SECONDS,
+                )
+                _LOGGER.warning(
+                    "Request unauthorized (401). Retrying auth for %s (attempt %s/%s) in %s seconds",
+                    path,
+                    auth_retry_attempt,
+                    MAX_AUTH_RETRY_ATTEMPTS,
+                    retry_delay,
+                )
+                await asyncio.sleep(retry_delay)
         except aiohttp.ClientError as err:
             raise HiotConnectionError(f"Connection error: {err}") from err
         except HiotApiError:

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock
+from unittest.mock import call
+from unittest.mock import patch
 
 import aiohttp
 import pytest
@@ -205,15 +207,52 @@ async def test_auto_reauth_on_401_response() -> None:
         devices_url = f"{API_BASE_URL}/{PATH_DEVICES}"
         login_url = f"{API_BASE_URL}/{PATH_LOGIN}"
 
-        with aioresponses() as mocked:
+        with (
+            aioresponses() as mocked,
+            patch("custom_components.hiot.api.asyncio.sleep", new=AsyncMock()) as mock_sleep,
+        ):
             mocked.get(devices_url, status=401)
             mocked.post(login_url, payload={"ok": True}, status=200)
             mocked.get(devices_url, payload=[{"deviceId": "light001", "deviceType": "light"}], status=200)
 
             devices = await client.async_get_devices()
+            mock_sleep.assert_awaited_once_with(1)
 
         assert devices == [{"deviceId": "light001", "deviceType": "light"}]
         assert client._authenticated is True
+
+
+async def test_auto_reauth_retries_up_to_10_times_then_raises_auth_error() -> None:
+    async with _session() as session:
+        client = HiotApiClient(session)
+        client._authenticated = True
+        client.async_ensure_authenticated = AsyncMock()
+
+        devices_url = f"{API_BASE_URL}/{PATH_DEVICES}"
+
+        with (
+            aioresponses() as mocked,
+            patch("custom_components.hiot.api.asyncio.sleep", new=AsyncMock()) as mock_sleep,
+        ):
+            mocked.get(devices_url, status=401, repeat=True)
+
+            with pytest.raises(HiotAuthError, match="after 10 retries"):
+                await client.async_get_devices()
+
+            assert client.async_ensure_authenticated.await_count == 10
+            assert mock_sleep.await_count == 10
+            assert mock_sleep.await_args_list == [
+                call(1),
+                call(2),
+                call(4),
+                call(8),
+                call(10),
+                call(10),
+                call(10),
+                call(10),
+                call(10),
+                call(10),
+            ]
 
 
 async def test_raises_hiot_api_error_for_invalid_json_body() -> None:
