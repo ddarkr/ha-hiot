@@ -1,0 +1,49 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "HT HomeService Login",
+        "description": "Enter your HT HomeService (Hi-oT) account credentials.",
+        "data": {
+          "username": "Username (ID)",
+          "password": "Password"
+        }
+      },
+      "select_danji": {
+        "title": "Select Apartment Complex",
+        "description": "Choose your apartment complex.",
+        "data": {
+          "danji": "Complex"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate",
+        "description": "Session expired for {username}. Please enter your password again.",
+        "data": {
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid username or password.",
+      "cannot_connect": "Unable to connect to HT HomeService server.",
+      "unknown": "An unexpected error occurred.",
+      "no_danji": "No apartment complex found for this account."
+    },
+    "abort": {
+      "already_configured": "This apartment complex is already configured.",
+      "reauth_successful": "Re-authentication successful."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Settings",
+        "data": {
+          "device_scan_interval": "Device update interval",
+          "energy_scan_interval": "Energy update interval"
+        }
+      }
+    }
+  }
+}

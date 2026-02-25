@@ -1,0 +1,18 @@
+[project]
+name = "hiot"
+version = "1.0.0"
+requires-python = ">=3.12"
+dependencies = ["pycryptodome>=3.21.0"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-homeassistant-custom-component>=0.13.0",
+    "pytest-cov>=4.1.0",
+    "aioresponses>=0.7.6",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

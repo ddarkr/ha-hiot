@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+
+# Test/cache artifacts
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# IDE/editor
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+
+# Home Assistant runtime data
+ha_config/
+
+# for Agents
+AGENTS.md
+progress.md
