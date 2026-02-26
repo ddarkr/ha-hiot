@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from datetime import datetime
 from typing import Any
 
 import aiohttp
@@ -169,8 +170,56 @@ class HiotApiClient:
         return {}
 
     @staticmethod
+    def _parse_sortable_date(value: Any) -> datetime | None:
+        if not isinstance(value, str):
+            return None
+
+        normalized = value.strip()
+        if not normalized:
+            return None
+
+        for date_format in ("%Y-%m-%d", "%Y-%m", "%Y%m", "%Y%m%d"):
+            try:
+                return datetime.strptime(normalized, date_format)
+            except ValueError:
+                continue
+
+        return None
+
+    @classmethod
+    def _select_latest_list_item(cls, values: list[Any]) -> dict[str, Any]:
+        dict_items = [item for item in values if isinstance(item, dict)]
+        if not dict_items:
+            return {}
+        if len(dict_items) == 1:
+            return dict_items[0]
+
+        date_keys = (
+            "date",
+            "usageDate",
+            "feeDate",
+            "goalDate",
+            "targetDate",
+            "yearMonth",
+            "ym",
+            "month",
+        )
+
+        dated_items: list[tuple[datetime, dict[str, Any]]] = []
+        for item in dict_items:
+            for key in date_keys:
+                parsed_date = cls._parse_sortable_date(item.get(key))
+                if parsed_date is not None:
+                    dated_items.append((parsed_date, item))
+                    break
+
+        if dated_items:
+            return max(dated_items, key=lambda entry: entry[0])[1]
+
+        return dict_items[0]
+
+    @staticmethod
     def _extract_first_list_item(response: Any, list_key: str) -> dict[str, Any]:
-        """Extract the first item from response data list."""
         if not isinstance(response, dict):
             return {}
 
@@ -182,11 +231,7 @@ class HiotApiClient:
         if not isinstance(values, list) or not values:
             return {}
 
-        first_item = values[0]
-        if not isinstance(first_item, dict):
-            return {}
-
-        return first_item
+        return HiotApiClient._select_latest_list_item(values)
 
     async def async_get_energy_usage(self, energy_type: str, date: str) -> dict[str, Any]:
         """Get energy usage comparison for current month."""

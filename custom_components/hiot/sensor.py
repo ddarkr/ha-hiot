@@ -16,18 +16,20 @@ from .const import DOMAIN, ENERGY_TYPES, MANUFACTURER
 from .coordinator import HiotEnergyCoordinator
 
 
-ENERGY_METRICS = ("usage", "fee", "goal")
+ENERGY_METRICS = ("usage", "fee", "goal", "same_area_usage")
 
 METRIC_LABELS = {
     "usage": "사용량",
     "fee": "요금",
     "goal": "목표",
+    "same_area_usage": "동일평형 사용량",
 }
 
 METRIC_DATA_FIELDS = {
     "usage": "usage",
     "fee": "fee",
     "goal": "goal",
+    "same_area_usage": "sameAreaTypeUsage",
 }
 
 METRIC_ICONS = {
@@ -46,12 +48,18 @@ METRIC_ICONS = {
         "WATER": "mdi:target",
         "GAS": "mdi:target",
     },
+    "same_area_usage": {
+        "ELEC": "mdi:home-group-plus",
+        "WATER": "mdi:home-group-plus",
+        "GAS": "mdi:home-group-plus",
+    },
 }
 
 METRIC_STATE_CLASSES = {
     "usage": SensorStateClass.TOTAL,
     "fee": SensorStateClass.TOTAL,
     "goal": None,
+    "same_area_usage": SensorStateClass.TOTAL,
 }
 
 ENERGY_LABELS = {
@@ -68,13 +76,13 @@ ENERGY_DEVICE_CLASSES = {
 
 ENERGY_UNITS = {
     "ELEC": "kWh",
-    "WATER": "L",
+    "WATER": "m³",
     "GAS": "m³",
 }
 
 ENERGY_CONVERSION_DIVISORS = {
     "ELEC": 1000.0,
-    "WATER": 1.0,
+    "WATER": 1000.0,
     "GAS": 1000.0,
 }
 
@@ -145,6 +153,12 @@ class HiotEnergySensor(CoordinatorEntity[HiotEnergyCoordinator], SensorEntity):
         if not isinstance(type_data, dict):
             return {}
 
+        if self._metric == "same_area_usage":
+            metric_data = type_data.get("usage")
+            if isinstance(metric_data, dict):
+                return metric_data
+            return {}
+
         metric_data = type_data.get(self._metric)
         if not isinstance(metric_data, dict):
             return {}
@@ -164,7 +178,7 @@ class HiotEnergySensor(CoordinatorEntity[HiotEnergyCoordinator], SensorEntity):
         if self._metric == "fee":
             return int(numeric_value)
 
-        if self._metric not in ("usage", "goal"):
+        if self._metric not in ("usage", "goal", "same_area_usage"):
             return numeric_value
 
         divisor = ENERGY_CONVERSION_DIVISORS[self._energy_type]

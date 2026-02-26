@@ -21,10 +21,11 @@ async def test_sensor_setup_entry_creates_energy_entities(
     await async_setup_entry(hass, mock_config_entry, add_entities)
 
     entities = add_entities.call_args[0][0]
-    assert len(entities) == 9
+    assert len(entities) == 12
     assert any(entity.unique_id == f"{mock_config_entry.entry_id}_energy_elec_usage" for entity in entities)
     assert any(entity.unique_id == f"{mock_config_entry.entry_id}_energy_water_fee" for entity in entities)
     assert any(entity.unique_id == f"{mock_config_entry.entry_id}_energy_gas_goal" for entity in entities)
+    assert any(entity.unique_id == f"{mock_config_entry.entry_id}_energy_elec_same_area_usage" for entity in entities)
 
 
 async def test_energy_sensor_unit_conversion_and_attributes(
@@ -67,6 +68,12 @@ async def test_energy_sensor_unit_conversion_and_attributes(
         "WATER",
         "goal",
     )
+    water_same_area_usage = HiotEnergySensor(
+        coordinator,
+        mock_config_entry.entry_id,
+        "WATER",
+        "same_area_usage",
+    )
     gas_usage = HiotEnergySensor(
         coordinator,
         mock_config_entry.entry_id,
@@ -82,9 +89,13 @@ async def test_energy_sensor_unit_conversion_and_attributes(
     assert elec_fee.native_value == 7860
     assert elec_fee.native_unit_of_measurement == "KRW"
 
-    assert water_goal.native_value == 200000
-    assert water_goal.native_unit_of_measurement == "L"
+    assert water_goal.native_value == 200
+    assert water_goal.native_unit_of_measurement == "m³"
     assert water_goal.icon == "mdi:target"
+
+    assert water_same_area_usage.native_value == 20
+    assert water_same_area_usage.native_unit_of_measurement == "m³"
+    assert water_same_area_usage.icon == "mdi:home-group-plus"
 
     assert gas_usage.native_value == 72.5
     assert gas_usage.extra_state_attributes == {"sameAreaTypeUsage": 60}

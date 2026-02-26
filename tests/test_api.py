@@ -365,6 +365,38 @@ async def test_async_get_energy_usage() -> None:
         assert result["sameAreaTypeUsage"] == 123000
 
 
+async def test_async_get_energy_usage_selects_latest_item_when_usage_list_has_multiple_dates() -> None:
+    async with _session() as session:
+        client = HiotApiClient(session)
+        url = f"{API_BASE_URL}/{PATH_EMS_USAGE}?energyType=WATER&period=MONTH&date=2025-02-01"
+
+        with aioresponses() as mocked:
+            mocked.get(
+                url,
+                payload={
+                    "data": {
+                        "usageList": [
+                            {
+                                "energyType": "WATER",
+                                "date": "2025-01-01",
+                                "usage": 22900,
+                            },
+                            {
+                                "energyType": "WATER",
+                                "date": "2025-02-01",
+                                "usage": 300,
+                            },
+                        ]
+                    }
+                },
+                status=200,
+            )
+
+            result = await client.async_get_energy_usage("WATER", "2025-02-01")
+
+        assert result["usage"] == 300
+
+
 async def test_async_get_energy_fee() -> None:
     async with _session() as session:
         client = HiotApiClient(session)
